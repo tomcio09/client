@@ -29,7 +29,8 @@ public class GuiModule extends Module {
 		settings.add(textColor);
 		settings.add(blur);
 		
-		setEnabled(true); // GUI module always enabled
+		// Don't save on init - just enable it
+		this.enabled = true;
 	}
 	
 	public List<Setting<?>> getSettings() {
