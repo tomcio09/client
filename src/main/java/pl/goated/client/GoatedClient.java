@@ -3,6 +3,7 @@ package pl.goated.client;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
 import org.lwjgl.glfw.GLFW;
@@ -37,7 +38,7 @@ public class GoatedClient implements ClientModInitializer {
 			// Load config
 			configManager.load();
 			
-			// Register keybinding
+			// Register keybinding (RIGHT_SHIFT)
 			openGuiKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
 				"key.goatedclient.open_gui",
 				InputUtil.Type.KEYSYM,
@@ -45,16 +46,17 @@ public class GoatedClient implements ClientModInitializer {
 				"category.goatedclient"
 			));
 			
-			// Register tick event
+			// Register tick event - works everywhere (menus, worlds, etc)
 			ClientTickEvents.END_CLIENT_TICK.register(client -> {
 				if (openGuiKey.wasPressed()) {
-					client.setScreen(clickGui);
+					MinecraftClient.getInstance().setScreen(clickGui);
 				}
 			});
 			
 			LOGGER.info(MOD_NAME + " initialized successfully!");
 		} catch (Exception e) {
 			LOGGER.error("Failed to initialize GoatedClient", e);
+			e.printStackTrace();
 		}
 	}
 	
