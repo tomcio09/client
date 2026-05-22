@@ -21,8 +21,8 @@ public class ColorPicker {
 	
 	public ColorPicker(ColorSetting setting, int x, int y) {
 		this.setting = setting;
-		this.x = x;
-		this.y = y;
+		this.x = Math.max(0, Math.min(x, MinecraftClient.getInstance().getWindow().getScaledWidth() - width));
+		this.y = Math.max(0, Math.min(y, MinecraftClient.getInstance().getWindow().getScaledHeight() - height));
 		
 		// Convert current color to HSB
 		int color = setting.getValue();
@@ -61,7 +61,7 @@ public class ColorPicker {
 		// Draw hex value
 		String hex = String.format("#%08X", getCurrentColor());
 		context.drawText(MinecraftClient.getInstance().textRenderer, 
-			hex, x + 15, previewY + 10, getContrastColor(getCurrentColor()), false);
+			hex, x + 15, previewY + 10, RenderUtil.getContrastColor(getCurrentColor()), false);
 		
 		// Update if dragging
 		if (draggingSaturation) {
@@ -76,10 +76,7 @@ public class ColorPicker {
 	}
 	
 	private void drawSaturationBrightnessPicker(DrawContext context, int x, int y, int size) {
-		// This is a simplified version - in production, you'd want to use shaders or textures
-		int baseColor = java.awt.Color.HSBtoRGB(hue, 1f, 1f);
-		
-		// Draw gradient (simplified)
+		// Draw gradient for saturation and brightness
 		for (int i = 0; i < size; i++) {
 			for (int j = 0; j < size; j++) {
 				float s = (float) i / size;
@@ -89,10 +86,13 @@ public class ColorPicker {
 			}
 		}
 		
-		// Draw selector
+		// Draw border
+		RenderUtil.drawRoundedRectOutline(context, x, y, size, size, 4, 1, 0xFFFFFFFF);
+		
+		// Draw selector circle
 		int selectorX = (int) (x + saturation * size);
 		int selectorY = (int) (y + (1 - brightness) * size);
-		RenderUtil.drawCircleOutline(context, selectorX, selectorY, 5, 2, 0xFFFFFFFF);
+		RenderUtil.drawCircleOutline(context, selectorX, selectorY, 5, 1, 0xFFFFFFFF);
 	}
 	
 	private void drawHueSlider(DrawContext context, int x, int y, int width, int height) {
@@ -103,9 +103,12 @@ public class ColorPicker {
 			context.fill(x + i, y, x + i + 1, y + height, color);
 		}
 		
+		// Draw border
+		RenderUtil.drawRoundedRectOutline(context, x, y, width, height, 3, 1, 0xFF000000);
+		
 		// Draw selector
 		int selectorX = (int) (x + hue * width);
-		context.fill(selectorX - 2, y - 2, selectorX + 2, y + height + 2, 0xFFFFFFFF);
+		context.fill(selectorX - 2, y - 3, selectorX + 2, y + height + 3, 0xFFFFFFFF);
 	}
 	
 	private void drawAlphaSlider(DrawContext context, int x, int y, int width, int height) {
@@ -120,9 +123,12 @@ public class ColorPicker {
 			context.fill(x + i, y, x + i + 1, y + height, color);
 		}
 		
+		// Draw border
+		RenderUtil.drawRoundedRectOutline(context, x, y, width, height, 3, 1, 0xFF000000);
+		
 		// Draw selector
 		int selectorX = (int) (x + alpha * width);
-		context.fill(selectorX - 2, y - 2, selectorX + 2, y + height + 2, 0xFFFFFFFF);
+		context.fill(selectorX - 2, y - 3, selectorX + 2, y + height + 3, 0xFFFFFFFF);
 	}
 	
 	private void drawCheckerboard(DrawContext context, int x, int y, int width, int height) {
@@ -141,7 +147,7 @@ public class ColorPicker {
 	public boolean mouseClicked(double mouseX, double mouseY, int button) {
 		int pickerSize = 200;
 		
-		// Check if clicking inside panel
+		// Check if clicking outside panel
 		if (mouseX < x || mouseX > x + width || mouseY < y || mouseY > y + height) {
 			setting.setValue(getCurrentColor());
 			return false;
@@ -200,13 +206,5 @@ public class ColorPicker {
 		int rgb = java.awt.Color.HSBtoRGB(hue, saturation, brightness);
 		int a = (int) (alpha * 255);
 		return (a << 24) | (rgb & 0x00FFFFFF);
-	}
-	
-	private int getContrastColor(int color) {
-		int r = (color >> 16) & 0xFF;
-		int g = (color >> 8) & 0xFF;
-		int b = color & 0xFF;
-		int luminance = (int) (0.299 * r + 0.587 * g + 0.114 * b);
-		return luminance > 128 ? 0xFF000000 : 0xFFFFFFFF;
 	}
 }
