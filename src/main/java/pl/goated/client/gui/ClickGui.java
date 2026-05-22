@@ -1,8 +1,8 @@
 package pl.goated.client.gui;
 
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.Text;
 import org.lwjgl.glfw.GLFW;
 import pl.goated.client.GoatedClient;
@@ -29,7 +29,6 @@ public class ClickGui extends Screen {
 	private static final int PADDING = 12;
 	
 	private int scrollY = 0;
-	private final int maxScroll = 5;
 	
 	public ClickGui() {
 		super(Text.literal("GoatedClient"));
@@ -117,12 +116,6 @@ public class ClickGui extends Screen {
 		
 		// Draw module buttons with scrolling support
 		int moduleAreaY = separatorY + PADDING;
-		context.enableScissor(
-			guiX * minecraft.getWindow().getGuiScale(),
-			(int) ((height - (guiY + guiHeight)) * minecraft.getWindow().getGuiScale()),
-			(int) (guiWidth * minecraft.getWindow().getGuiScale()),
-			(int) ((guiHeight - moduleAreaY + guiY) * minecraft.getWindow().getGuiScale())
-		);
 		
 		int buttonIndex = 0;
 		for (ModuleButton button : moduleButtons) {
@@ -130,12 +123,14 @@ public class ClickGui extends Screen {
 				int row = buttonIndex / 2;
 				int buttonYPos = moduleAreaY + row * (MODULE_BUTTON_HEIGHT + MODULE_BUTTON_SPACING);
 				button.setPosition(button.x, buttonYPos);
-				button.render(context, mouseX, mouseY, guiModule);
+				
+				// Only render if within GUI bounds
+				if (buttonYPos + MODULE_BUTTON_HEIGHT > guiY && buttonYPos < guiY + guiHeight) {
+					button.render(context, mouseX, mouseY, guiModule);
+				}
 				buttonIndex++;
 			}
 		}
-		
-		context.disableScissor();
 	}
 	
 	@Override
@@ -269,8 +264,10 @@ public class ClickGui extends Screen {
 			RenderUtil.drawRoundedRect(context, x, y, width, height, 6, bgColor);
 			RenderUtil.drawRoundedRectOutline(context, x, y, width, height, 6, 1, guiModule.borderColor.getValue());
 			
+			MinecraftClient mc = MinecraftClient.getInstance();
+			
 			// Draw module name
-			context.drawText(minecraft.getInstance().textRenderer, 
+			context.drawText(mc.textRenderer, 
 				module.getName(), x + 10, y + 10, 
 				guiModule.textColor.getValue(), false);
 			
@@ -279,7 +276,7 @@ public class ClickGui extends Screen {
 			if (desc.length() > 35) {
 				desc = desc.substring(0, 32) + "...";
 			}
-			context.drawText(minecraft.getInstance().textRenderer, 
+			context.drawText(mc.textRenderer, 
 				desc, x + 10, y + 26, 
 				RenderUtil.adjustAlpha(guiModule.textColor.getValue(), 180), false);
 			
