@@ -61,17 +61,13 @@ public class ModuleSettingsPanel {
 	
 	private List<Setting<?>> getModuleSettings() throws Exception {
 		List<Setting<?>> settings = new ArrayList<>();
-		
 		for (Field field : module.getClass().getDeclaredFields()) {
 			if (Setting.class.isAssignableFrom(field.getType())) {
 				field.setAccessible(true);
 				Setting<?> setting = (Setting<?>) field.get(module);
-				if (setting != null) {
-					settings.add(setting);
-				}
+				if (setting != null) settings.add(setting);
 			}
 		}
-		
 		return settings;
 	}
 	
@@ -82,16 +78,13 @@ public class ModuleSettingsPanel {
 		int borderColor = guiModule.borderColor.getValue();
 		int textColor = guiModule.textColor.getValue();
 		
-		// Draw background
 		RenderUtil.drawRoundedRect(context, x, y, width, height, 10, bgColor);
 		RenderUtil.drawRoundedRectOutline(context, x, y, width, height, 10, 2, borderColor);
 		
-		// Draw title bar
 		RenderUtil.drawRect(context, x, y, width, 40, RenderUtil.adjustAlpha(borderColor, 50));
 		context.drawText(MinecraftClient.getInstance().textRenderer, 
 			module.getName() + " Settings", x + PADDING, y + 15, textColor, false);
 		
-		// Draw close button
 		int closeX = x + width - CLOSE_BUTTON_SIZE - 10;
 		int closeY = y + 10;
 		boolean closeHovered = mouseX >= closeX && mouseX <= closeX + CLOSE_BUTTON_SIZE &&
@@ -99,24 +92,18 @@ public class ModuleSettingsPanel {
 		
 		RenderUtil.drawRoundedRect(context, closeX, closeY, CLOSE_BUTTON_SIZE, CLOSE_BUTTON_SIZE, 4, 
 			closeHovered ? 0xFFFF0000 : RenderUtil.adjustAlpha(borderColor, 100));
+		context.drawText(MinecraftClient.getInstance().textRenderer, "X", closeX + 6, closeY + 6, 0xFFFFFFFF, false);
 		
-		// Draw X
-		context.drawText(MinecraftClient.getInstance().textRenderer, 
-			"X", closeX + 6, closeY + 6, 0xFFFFFFFF, false);
-		
-		// Draw settings
 		for (SettingComponent component : components) {
 			component.render(context, x, y, mouseX, mouseY, guiModule);
 		}
 		
-		// Draw color picker if active
 		if (activeColorPicker != null) {
 			activeColorPicker.render(context, mouseX, mouseY);
 		}
 	}
 	
 	public boolean mouseClicked(double mouseX, double mouseY, int button) {
-		// Check color picker click
 		if (activeColorPicker != null) {
 			if (activeColorPicker.mouseClicked(mouseX, mouseY, button)) {
 				return true;
@@ -126,7 +113,6 @@ public class ModuleSettingsPanel {
 			}
 		}
 		
-		// Check close button
 		int closeX = x + width - CLOSE_BUTTON_SIZE - 10;
 		int closeY = y + 10;
 		if (mouseX >= closeX && mouseX <= closeX + CLOSE_BUTTON_SIZE &&
@@ -136,7 +122,6 @@ public class ModuleSettingsPanel {
 			return true;
 		}
 		
-		// Check setting components
 		for (SettingComponent component : components) {
 			if (component.mouseClicked(x, y, mouseX, mouseY, button)) {
 				if (component instanceof ColorSettingComponent colorComp) {
@@ -147,6 +132,13 @@ public class ModuleSettingsPanel {
 		}
 		
 		return false;
+	}
+
+	// DODANE: Rozwiązuje problem z suwakiem!
+	public void mouseReleased(double mouseX, double mouseY, int button) {
+		if (activeColorPicker != null) {
+			activeColorPicker.mouseReleased();
+		}
 	}
 	
 	public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
@@ -179,27 +171,23 @@ public class ModuleSettingsPanel {
 			int absoluteX = panelX + x;
 			int absoluteY = panelY + y;
 			
-			// Draw setting name
 			context.drawText(MinecraftClient.getInstance().textRenderer, 
 				setting.getName(), absoluteX, absoluteY + 5, guiModule.textColor.getValue(), false);
 			
-			// Draw toggle
 			int toggleX = absoluteX + width - 45;
-			int toggleY = absoluteY;
 			int toggleWidth = 40;
 			int toggleHeight = 20;
 			
 			boolean hovered = mouseX >= toggleX && mouseX <= toggleX + toggleWidth &&
-				mouseY >= toggleY && mouseY <= toggleY + toggleHeight;
+				mouseY >= absoluteY && mouseY <= absoluteY + toggleHeight;
 			
 			int bgColor = setting.getValue() ? 0xFF00AA00 : 0xFF555555;
 			if (hovered) bgColor = RenderUtil.adjustBrightness(bgColor, 20);
 			
-			RenderUtil.drawRoundedRect(context, toggleX, toggleY, toggleWidth, toggleHeight, 10, bgColor);
+			RenderUtil.drawRoundedRect(context, toggleX, absoluteY, toggleWidth, toggleHeight, 10, bgColor);
 			
-			// Draw toggle circle
 			int circleX = setting.getValue() ? toggleX + toggleWidth - 18 : toggleX + 2;
-			RenderUtil.drawRoundedRect(context, circleX, toggleY + 2, 16, 16, 8, 0xFFFFFFFF);
+			RenderUtil.drawRoundedRect(context, circleX, absoluteY + 2, 16, 16, 8, 0xFFFFFFFF);
 		}
 		
 		@Override
@@ -211,6 +199,7 @@ public class ModuleSettingsPanel {
 			if (mouseX >= toggleX && mouseX <= toggleX + 40 &&
 				mouseY >= absoluteY && mouseY <= absoluteY + 20) {
 				setting.toggle();
+				GoatedClient.getInstance().getConfigManager().save();
 				return true;
 			}
 			return false;
@@ -233,21 +222,17 @@ public class ModuleSettingsPanel {
 			int absoluteX = panelX + x;
 			int absoluteY = panelY + y;
 			
-			// Draw setting name
 			context.drawText(MinecraftClient.getInstance().textRenderer, 
 				setting.getName(), absoluteX, absoluteY + 5, guiModule.textColor.getValue(), false);
 			
-			// Draw color preview
 			int previewX = absoluteX + width - 80;
-			int previewY = absoluteY;
 			
-			RenderUtil.drawRoundedRect(context, previewX, previewY, 70, 25, 5, setting.getValue());
-			RenderUtil.drawRoundedRectOutline(context, previewX, previewY, 70, 25, 5, 1, guiModule.borderColor.getValue());
+			RenderUtil.drawRoundedRect(context, previewX, absoluteY, 70, 25, 5, setting.getValue());
+			RenderUtil.drawRoundedRectOutline(context, previewX, absoluteY, 70, 25, 5, 1, guiModule.borderColor.getValue());
 			
-			// Draw hex value
 			String hex = String.format("#%08X", setting.getValue());
 			context.drawText(MinecraftClient.getInstance().textRenderer, 
-				hex, previewX + 5, previewY + 8, RenderUtil.getContrastColor(setting.getValue()), false);
+				hex, previewX + 5, absoluteY + 8, RenderUtil.getContrastColor(setting.getValue()), false);
 		}
 		
 		@Override
