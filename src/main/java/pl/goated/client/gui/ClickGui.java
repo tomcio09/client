@@ -27,6 +27,7 @@ public class ClickGui extends Screen {
 	private static final int MODULE_BUTTON_HEIGHT = 65;
 	private static final int MODULE_BUTTON_SPACING = 8;
 	private static final int PADDING = 12;
+	private static final int CORNER_RADIUS = 20; // Zmienione z 8 na 20
 	
 	public ClickGui() {
 		super(Text.literal("GoatedClient"));
@@ -103,11 +104,11 @@ public class ClickGui extends Screen {
 		GoatedClient.LOGGER.info("Drawing GUI: x=" + guiX + ", y=" + guiY + ", w=" + guiWidth + ", h=" + guiHeight);
 		GoatedClient.LOGGER.info("BG Color: " + Integer.toHexString(bgColor));
 		
-		// Draw main background
-		RenderUtil.drawRoundedRect(context, guiX, guiY, guiWidth, guiHeight, 8, bgColor);
+		// Draw main background z zaokrągleniem 20
+		RenderUtil.drawRoundedRect(context, guiX, guiY, guiWidth, guiHeight, CORNER_RADIUS, bgColor);
 		
 		// Draw border
-		RenderUtil.drawRoundedRectOutline(context, guiX, guiY, guiWidth, guiHeight, 8, 2, borderColor);
+		RenderUtil.drawRoundedRectOutline(context, guiX, guiY, guiWidth, guiHeight, CORNER_RADIUS, 2, borderColor);
 		
 		// Draw title
 		context.drawText(textRenderer, "GoatedClient", guiX + PADDING, guiY + PADDING, textColor, false);
@@ -115,7 +116,7 @@ public class ClickGui extends Screen {
 		// Draw search bar background
 		int searchY = guiY + PADDING + 20;
 		int searchBarColor = searchFocused ? RenderUtil.adjustAlpha(borderColor, 100) : RenderUtil.adjustAlpha(borderColor, 50);
-		RenderUtil.drawRoundedRect(context, guiX + PADDING, searchY, guiWidth - PADDING * 2, SEARCH_HEIGHT, 6, searchBarColor);
+		RenderUtil.drawRoundedRect(context, guiX + PADDING, searchY, guiWidth - PADDING * 2, SEARCH_HEIGHT, 10, searchBarColor);
 		
 		// Draw search text
 		String displayText = searchText.isEmpty() ? "Search modules..." : searchText;
@@ -267,9 +268,9 @@ public class ClickGui extends Screen {
 				bgColor = RenderUtil.adjustBrightness(bgColor, 15);
 			}
 			
-			// Draw button background
-			RenderUtil.drawRoundedRect(context, x, y, width, height, 6, bgColor);
-			RenderUtil.drawRoundedRectOutline(context, x, y, width, height, 6, 1, guiModule.borderColor.getValue());
+			// Draw button background z zaokrągleniem 12
+			RenderUtil.drawRoundedRect(context, x, y, width, height, 12, bgColor);
+			RenderUtil.drawRoundedRectOutline(context, x, y, width, height, 12, 1, guiModule.borderColor.getValue());
 			
 			MinecraftClient mc = MinecraftClient.getInstance();
 			
