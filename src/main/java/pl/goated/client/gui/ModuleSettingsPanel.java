@@ -87,7 +87,7 @@ public class ModuleSettingsPanel {
 		RenderUtil.drawRoundedRectOutline(context, x, y, width, height, 10, 2, borderColor);
 		
 		// Draw title bar
-		RenderUtil.drawRoundedRect(context, x, y, width, 40, 10, adjustAlpha(borderColor, 50));
+		RenderUtil.drawRect(context, x, y, width, 40, RenderUtil.adjustAlpha(borderColor, 50));
 		context.drawText(MinecraftClient.getInstance().textRenderer, 
 			module.getName() + " Settings", x + PADDING, y + 15, textColor, false);
 		
@@ -98,7 +98,7 @@ public class ModuleSettingsPanel {
 			mouseY >= closeY && mouseY <= closeY + CLOSE_BUTTON_SIZE;
 		
 		RenderUtil.drawRoundedRect(context, closeX, closeY, CLOSE_BUTTON_SIZE, CLOSE_BUTTON_SIZE, 4, 
-			closeHovered ? 0xFFFF0000 : adjustAlpha(borderColor, 100));
+			closeHovered ? 0xFFFF0000 : RenderUtil.adjustAlpha(borderColor, 100));
 		
 		// Draw X
 		context.drawText(MinecraftClient.getInstance().textRenderer, 
@@ -158,10 +158,6 @@ public class ModuleSettingsPanel {
 		return false;
 	}
 	
-	private int adjustAlpha(int color, int alpha) {
-		return (color & 0x00FFFFFF) | (alpha << 24);
-	}
-	
 	private interface SettingComponent {
 		void render(DrawContext context, int panelX, int panelY, int mouseX, int mouseY, GuiModule guiModule);
 		boolean mouseClicked(int panelX, int panelY, double mouseX, double mouseY, int button);
@@ -197,7 +193,7 @@ public class ModuleSettingsPanel {
 				mouseY >= toggleY && mouseY <= toggleY + toggleHeight;
 			
 			int bgColor = setting.getValue() ? 0xFF00AA00 : 0xFF555555;
-			if (hovered) bgColor = adjustBrightness(bgColor, 20);
+			if (hovered) bgColor = RenderUtil.adjustBrightness(bgColor, 20);
 			
 			RenderUtil.drawRoundedRect(context, toggleX, toggleY, toggleWidth, toggleHeight, 10, bgColor);
 			
@@ -218,14 +214,6 @@ public class ModuleSettingsPanel {
 				return true;
 			}
 			return false;
-		}
-		
-		private int adjustBrightness(int color, int amount) {
-			int a = (color >> 24) & 0xFF;
-			int r = Math.min(255, ((color >> 16) & 0xFF) + amount);
-			int g = Math.min(255, ((color >> 8) & 0xFF) + amount);
-			int b = Math.min(255, (color & 0xFF) + amount);
-			return (a << 24) | (r << 16) | (g << 8) | b;
 		}
 	}
 	
@@ -259,7 +247,7 @@ public class ModuleSettingsPanel {
 			// Draw hex value
 			String hex = String.format("#%08X", setting.getValue());
 			context.drawText(MinecraftClient.getInstance().textRenderer, 
-				hex, previewX + 5, previewY + 8, getContrastColor(setting.getValue()), false);
+				hex, previewX + 5, previewY + 8, RenderUtil.getContrastColor(setting.getValue()), false);
 		}
 		
 		@Override
@@ -273,14 +261,6 @@ public class ModuleSettingsPanel {
 				return true;
 			}
 			return false;
-		}
-		
-		private int getContrastColor(int color) {
-			int r = (color >> 16) & 0xFF;
-			int g = (color >> 8) & 0xFF;
-			int b = color & 0xFF;
-			int luminance = (int) (0.299 * r + 0.587 * g + 0.114 * b);
-			return luminance > 128 ? 0xFF000000 : 0xFFFFFFFF;
 		}
 	}
 }
