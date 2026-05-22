@@ -1,5 +1,6 @@
 package pl.goated.client.gui;
 
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.text.Text;
@@ -237,7 +238,7 @@ public class ClickGui extends Screen {
 				guiModule.borderColor.getValue());
 			
 			// Draw module name
-			context.drawText(context.getMatrices().peek().getPositionMatrix(), 
+			context.drawText(MinecraftClient.getInstance().textRenderer, 
 				module.getName(), absoluteX + 8, absoluteY + 8, 
 				guiModule.textColor.getValue(), false);
 			
@@ -246,7 +247,7 @@ public class ClickGui extends Screen {
 			if (desc.length() > 30) {
 				desc = desc.substring(0, 27) + "...";
 			}
-			context.drawText(context.getMatrices().peek().getPositionMatrix(), 
+			context.drawText(MinecraftClient.getInstance().textRenderer, 
 				desc, absoluteX + 8, absoluteY + 22, 
 				adjustAlpha(guiModule.textColor.getValue(), 150), false);
 			
