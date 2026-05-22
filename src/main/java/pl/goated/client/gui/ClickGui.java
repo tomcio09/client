@@ -28,8 +28,6 @@ public class ClickGui extends Screen {
 	private static final int MODULE_BUTTON_SPACING = 8;
 	private static final int PADDING = 12;
 	
-	private int scrollY = 0;
-	
 	public ClickGui() {
 		super(Text.literal("GoatedClient"));
 	}
@@ -39,7 +37,10 @@ public class ClickGui extends Screen {
 		super.init();
 		
 		GuiModule guiModule = (GuiModule) GoatedClient.getInstance().getModuleManager().getModuleByName("GUI");
-		if (guiModule == null) return;
+		if (guiModule == null) {
+			GoatedClient.LOGGER.warn("GUI Module not found!");
+			return;
+		}
 		
 		// Calculate GUI dimensions - 50% width, 75% height
 		guiWidth = (int) (width * 0.5);
@@ -50,6 +51,11 @@ public class ClickGui extends Screen {
 		// Initialize module buttons
 		moduleButtons.clear();
 		List<Module> modules = GoatedClient.getInstance().getModuleManager().getModules();
+		
+		if (modules.isEmpty()) {
+			GoatedClient.LOGGER.warn("No modules found!");
+			return;
+		}
 		
 		int buttonY = guiY + SEARCH_HEIGHT + PADDING * 2;
 		int buttonsPerRow = 2;
@@ -70,7 +76,7 @@ public class ClickGui extends Screen {
 	@Override
 	public void render(DrawContext context, int mouseX, int mouseY, float delta) {
 		// Render semi-transparent background
-		context.fill(0, 0, width, height, 0x80000000);
+		this.renderBackground(context, mouseX, mouseY, delta);
 		
 		GuiModule guiModule = (GuiModule) GoatedClient.getInstance().getModuleManager().getModuleByName("GUI");
 		if (guiModule == null) {
@@ -94,14 +100,20 @@ public class ClickGui extends Screen {
 		int borderColor = guiModule.borderColor.getValue();
 		int textColor = guiModule.textColor.getValue();
 		
+		GoatedClient.LOGGER.info("Drawing GUI: x=" + guiX + ", y=" + guiY + ", w=" + guiWidth + ", h=" + guiHeight);
+		GoatedClient.LOGGER.info("BG Color: " + Integer.toHexString(bgColor));
+		
 		// Draw main background
 		RenderUtil.drawRoundedRect(context, guiX, guiY, guiWidth, guiHeight, 8, bgColor);
 		
 		// Draw border
 		RenderUtil.drawRoundedRectOutline(context, guiX, guiY, guiWidth, guiHeight, 8, 2, borderColor);
 		
+		// Draw title
+		context.drawText(textRenderer, "GoatedClient", guiX + PADDING, guiY + PADDING, textColor, false);
+		
 		// Draw search bar background
-		int searchY = guiY + PADDING;
+		int searchY = guiY + PADDING + 20;
 		int searchBarColor = searchFocused ? RenderUtil.adjustAlpha(borderColor, 100) : RenderUtil.adjustAlpha(borderColor, 50);
 		RenderUtil.drawRoundedRect(context, guiX + PADDING, searchY, guiWidth - PADDING * 2, SEARCH_HEIGHT, 6, searchBarColor);
 		
@@ -111,36 +123,30 @@ public class ClickGui extends Screen {
 			searchText.isEmpty() ? RenderUtil.adjustAlpha(textColor, 128) : textColor, false);
 		
 		// Draw separator line below search
-		int separatorY = guiY + PADDING + SEARCH_HEIGHT + PADDING;
+		int separatorY = searchY + SEARCH_HEIGHT + PADDING;
 		RenderUtil.drawHorizontalLine(context, guiX + PADDING, separatorY, guiWidth - PADDING * 2, 1, borderColor);
 		
-		// Draw module buttons with scrolling support
+		// Draw module buttons
 		int moduleAreaY = separatorY + PADDING;
+		int maxModuleY = guiY + guiHeight - PADDING;
 		
 		int buttonIndex = 0;
 		for (ModuleButton button : moduleButtons) {
 			if (button.matchesSearch(searchText)) {
 				int row = buttonIndex / 2;
 				int buttonYPos = moduleAreaY + row * (MODULE_BUTTON_HEIGHT + MODULE_BUTTON_SPACING);
-				button.setPosition(button.x, buttonYPos);
 				
 				// Only render if within GUI bounds
-				if (buttonYPos + MODULE_BUTTON_HEIGHT > guiY && buttonYPos < guiY + guiHeight) {
+				if (buttonYPos + MODULE_BUTTON_HEIGHT <= maxModuleY && buttonYPos >= moduleAreaY) {
+					button.setPosition(
+						guiX + PADDING + (buttonIndex % 2) * (button.width + PADDING),
+						buttonYPos
+					);
 					button.render(context, mouseX, mouseY, guiModule);
 				}
 				buttonIndex++;
 			}
 		}
-	}
-	
-	@Override
-	public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
-		if (mouseX >= guiX && mouseX <= guiX + guiWidth &&
-			mouseY >= guiY && mouseY <= guiY + guiHeight) {
-			scrollY += (int) (verticalAmount * 10);
-			return true;
-		}
-		return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
 	}
 	
 	@Override
@@ -152,7 +158,7 @@ public class ClickGui extends Screen {
 		}
 		
 		// Check search bar click
-		int searchY = guiY + PADDING;
+		int searchY = guiY + PADDING + 20;
 		if (mouseX >= guiX + PADDING && mouseX <= guiX + guiWidth - PADDING &&
 			mouseY >= searchY && mouseY <= searchY + SEARCH_HEIGHT) {
 			searchFocused = true;
@@ -169,6 +175,7 @@ public class ClickGui extends Screen {
 				if (button == 0) { // Left click
 					moduleButton.module.toggle();
 					GoatedClient.getInstance().getConfigManager().save();
+					GoatedClient.LOGGER.info("Toggled module: " + moduleButton.module.getName());
 					return true;
 				} else if (button == 1) { // Right click
 					openSettingsPanel(moduleButton.module);
