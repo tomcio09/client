@@ -1,0 +1,28 @@
+{
+	"schemaVersion": 1,
+	"id": "goatedclient",
+	"version": "${version}",
+	"name": "GoatedClient",
+	"description": "Advanced Minecraft client modification",
+	"authors": [
+		"GoatedDev"
+	],
+	"contact": {},
+	"license": "MIT",
+	"icon": "assets/goatedclient/icon.png",
+	"environment": "client",
+	"entrypoints": {
+		"client": [
+			"pl.goated.client.GoatedClient"
+		]
+	},
+	"mixins": [
+		"goatedclient.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.16.0",
+		"minecraft": "~1.21.4",
+		"java": ">=21",
+		"fabric-api": "*"
+	}
+}
