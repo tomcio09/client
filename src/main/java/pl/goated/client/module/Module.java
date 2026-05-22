@@ -6,7 +6,7 @@ public abstract class Module {
 	private final String name;
 	private final String description;
 	private final Category category;
-	private boolean enabled;
+	protected boolean enabled;
 	
 	public Module(String name, String description, Category category) {
 		this.name = name;
@@ -30,7 +30,16 @@ public abstract class Module {
 			onDisable();
 		}
 		
-		GoatedClient.getInstance().getConfigManager().save();
+		// Only save if GoatedClient is fully initialized
+		try {
+			if (GoatedClient.getInstance() != null && 
+			    GoatedClient.getInstance().getConfigManager() != null &&
+			    GoatedClient.getInstance().getModuleManager() != null) {
+				GoatedClient.getInstance().getConfigManager().save();
+			}
+		} catch (Exception e) {
+			// Ignore errors during initialization
+		}
 	}
 	
 	public void onEnable() {}
