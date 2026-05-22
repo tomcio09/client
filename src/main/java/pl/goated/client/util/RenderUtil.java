@@ -5,39 +5,84 @@ import net.minecraft.client.gui.DrawContext;
 public class RenderUtil {
 	
 	public static void drawRoundedRect(DrawContext context, int x, int y, int width, int height, int radius, int color) {
-		// Use simple filled rectangles instead of complex circle math
-		int a = (color >> 24) & 0xFF;
-		int r = (color >> 16) & 0xFF;
-		int g = (color >> 8) & 0xFF;
-		int b = color & 0xFF;
+		if (radius <= 0) {
+			context.fill(x, y, x + width, y + height, color);
+			return;
+		}
 		
-		// Draw main rectangle
+		// Centralna część
 		context.fill(x + radius, y, x + width - radius, y + height, color);
-		context.fill(x, y + radius, x + width, y + height - radius, color);
+		// Lewa część
+		context.fill(x, y + radius, x + radius, y + height - radius, color);
+		// Prawa część
+		context.fill(x + width - radius, y + radius, x + width, y + height - radius, color);
 		
-		// Draw corners (simple approach)
-		drawCorner(context, x + radius, y + radius, radius, color); // Top-left
-		drawCorner(context, x + width - radius, y + radius, radius, color); // Top-right
-		drawCorner(context, x + radius, y + height - radius, radius, color); // Bottom-left
-		drawCorner(context, x + width - radius, y + height - radius, radius, color); // Bottom-right
+		// Rogi (0=Lewy-Górny, 1=Prawy-Górny, 2=Lewy-Dolny, 3=Prawy-Dolny)
+		drawCorner(context, x + radius, y + radius, radius, 0, color);
+		drawCorner(context, x + width - radius, y + radius, radius, 1, color);
+		drawCorner(context, x + radius, y + height - radius, radius, 2, color);
+		drawCorner(context, x + width - radius, y + height - radius, radius, 3, color);
 	}
 	
-	private static void drawCorner(DrawContext context, int cx, int cy, int radius, int color) {
+	private static void drawCorner(DrawContext context, int cx, int cy, int radius, int type, int color) {
 		for (int i = 0; i < radius; i++) {
-			int height = (int) Math.sqrt(radius * radius - i * i);
-			context.fill(cx - i, cy - height, cx - i + 1, cy + height, color);
+			int h = (int) Math.round(Math.sqrt(radius * radius - i * i));
+			
+			if (type == 0) { // Lewy Górny
+				context.fill(cx - i - 1, cy - h, cx - i, cy, color);
+			} else if (type == 1) { // Prawy Górny
+				context.fill(cx + i, cy - h, cx + i + 1, cy, color);
+			} else if (type == 2) { // Lewy Dolny
+				context.fill(cx - i - 1, cy, cx - i, cy + h, color);
+			} else if (type == 3) { // Prawy Dolny
+				context.fill(cx + i, cy, cx + i + 1, cy + h, color);
+			}
 		}
 	}
 	
 	public static void drawRoundedRectOutline(DrawContext context, int x, int y, int width, int height, int radius, int thickness, int color) {
-		// Draw top line
+		if (radius <= 0) {
+			drawHorizontalLine(context, x, y, width, thickness, color);
+			drawHorizontalLine(context, x, y + height - thickness, width, thickness, color);
+			context.fill(x, y + thickness, x + thickness, y + height - thickness, color);
+			context.fill(x + width - thickness, y + thickness, x + width, y + height - thickness, color);
+			return;
+		}
+		
+		// Góra
 		context.fill(x + radius, y, x + width - radius, y + thickness, color);
-		// Draw bottom line
+		// Dół
 		context.fill(x + radius, y + height - thickness, x + width - radius, y + height, color);
-		// Draw left line
+		// Lewo
 		context.fill(x, y + radius, x + thickness, y + height - radius, color);
-		// Draw right line
+		// Prawo
 		context.fill(x + width - thickness, y + radius, x + width, y + height - radius, color);
+		
+		// Obramowania Rogów
+		drawCornerOutline(context, x + radius, y + radius, radius, thickness, 0, color);
+		drawCornerOutline(context, x + width - radius, y + radius, radius, thickness, 1, color);
+		drawCornerOutline(context, x + radius, y + height - radius, radius, thickness, 2, color);
+		drawCornerOutline(context, x + width - radius, y + height - radius, radius, thickness, 3, color);
+	}
+
+	private static void drawCornerOutline(DrawContext context, int cx, int cy, int radius, int thickness, int type, int color) {
+		for (int i = 0; i < radius; i++) {
+			int outerH = (int) Math.round(Math.sqrt(radius * radius - i * i));
+			int innerR = radius - thickness;
+			int innerH = (i < innerR) ? (int) Math.round(Math.sqrt(innerR * innerR - i * i)) : 0;
+			
+			if (outerH > innerH) {
+				if (type == 0) { // Lewy Górny
+					context.fill(cx - i - 1, cy - outerH, cx - i, cy - innerH, color);
+				} else if (type == 1) { // Prawy Górny
+					context.fill(cx + i, cy - outerH, cx + i + 1, cy - innerH, color);
+				} else if (type == 2) { // Lewy Dolny
+					context.fill(cx - i - 1, cy + innerH, cx - i, cy + outerH, color);
+				} else if (type == 3) { // Prawy Dolny
+					context.fill(cx + i, cy + innerH, cx + i + 1, cy + outerH, color);
+				}
+			}
+		}
 	}
 	
 	public static void drawHorizontalLine(DrawContext context, int x, int y, int width, int thickness, int color) {
@@ -49,45 +94,29 @@ public class RenderUtil {
 	}
 	
 	public static void drawCircleOutline(DrawContext context, int centerX, int centerY, int radius, int thickness, int color) {
-		// Draw circle outline using simple points
-		for (int i = 0; i < 360; i += 5) {
-			double angle = Math.toRadians(i);
-			int x1 = (int) (centerX + Math.cos(angle) * radius);
-			int y1 = (int) (centerY + Math.sin(angle) * radius);
-			
-			double nextAngle = Math.toRadians(i + 5);
-			int x2 = (int) (centerX + Math.cos(nextAngle) * radius);
-			int y2 = (int) (centerY + Math.sin(nextAngle) * radius);
-			
-			// Draw line between points
-			drawLine(context, x1, y1, x2, y2, color);
-		}
+		// Sprytne wykorzystanie rogów do narysowania pełnego koła
+		drawCornerOutline(context, centerX, centerY, radius, thickness, 0, color);
+		drawCornerOutline(context, centerX, centerY, radius, thickness, 1, color);
+		drawCornerOutline(context, centerX, centerY, radius, thickness, 2, color);
+		drawCornerOutline(context, centerX, centerY, radius, thickness, 3, color);
 	}
 	
 	public static void drawLine(DrawContext context, int x1, int y1, int x2, int y2, int color) {
-		int dx = Math.abs(x2 - x1);
-		int dy = Math.abs(y2 - y1);
-		int sx = x1 < x2 ? 1 : -1;
-		int sy = y1 < y2 ? 1 : -1;
-		int err = dx - dy;
+		// Algorytm DDA do rysowania linii
+		double dx = x2 - x1;
+		double dy = y2 - y1;
+		double steps = Math.max(Math.abs(dx), Math.abs(dy));
 		
-		int x = x1;
-		int y = y1;
+		double xInc = dx / steps;
+		double yInc = dy / steps;
 		
-		while (true) {
-			context.fill(x, y, x + 1, y + 1, color);
-			
-			if (x == x2 && y == y2) break;
-			
-			int e2 = 2 * err;
-			if (e2 > -dy) {
-				err -= dy;
-				x += sx;
-			}
-			if (e2 < dx) {
-				err += dx;
-				y += sy;
-			}
+		double x = x1;
+		double y = y1;
+		
+		for (int i = 0; i <= steps; i++) {
+			context.fill((int)x, (int)y, (int)x + 1, (int)y + 1, color);
+			x += xInc;
+			y += yInc;
 		}
 	}
 	
