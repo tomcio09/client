@@ -26,6 +26,11 @@ public class ConfigManager {
 	
 	public void save() {
 		try {
+			if (GoatedClient.getInstance() == null || 
+			    GoatedClient.getInstance().getModuleManager() == null) {
+				return; // Don't save if not fully initialized
+			}
+			
 			JsonObject root = new JsonObject();
 			JsonObject modules = new JsonObject();
 			
@@ -61,19 +66,23 @@ public class ConfigManager {
 			
 		} catch (IOException e) {
 			GoatedClient.LOGGER.error("Failed to save config", e);
+		} catch (Exception e) {
+			GoatedClient.LOGGER.error("Unexpected error during config save", e);
 		}
 	}
 	
 	public void load() {
-		if (!Files.exists(configPath)) {
-			save();
-			return;
-		}
-		
 		try {
+			if (!Files.exists(configPath)) {
+				save();
+				return;
+			}
+			
 			String json = Files.readString(configPath);
 			JsonObject root = gson.fromJson(json, JsonObject.class);
 			JsonObject modules = root.getAsJsonObject("modules");
+			
+			if (modules == null) return;
 			
 			for (Module module : GoatedClient.getInstance().getModuleManager().getModules()) {
 				if (modules.has(module.getName())) {
@@ -109,6 +118,8 @@ public class ConfigManager {
 			
 		} catch (IOException e) {
 			GoatedClient.LOGGER.error("Failed to load config", e);
+		} catch (Exception e) {
+			GoatedClient.LOGGER.error("Unexpected error during config load", e);
 		}
 	}
 }
