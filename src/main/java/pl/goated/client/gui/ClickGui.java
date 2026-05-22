@@ -1,8 +1,8 @@
 package pl.goated.client.gui;
 
-import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.Text;
 import org.lwjgl.glfw.GLFW;
 import pl.goated.client.GoatedClient;
@@ -23,10 +23,13 @@ public class ClickGui extends Screen {
 	private int guiX, guiY;
 	private int guiWidth, guiHeight;
 	
-	private static final int SEARCH_HEIGHT = 25;
-	private static final int MODULE_BUTTON_HEIGHT = 60;
-	private static final int MODULE_BUTTON_SPACING = 5;
-	private static final int PADDING = 10;
+	private static final int SEARCH_HEIGHT = 30;
+	private static final int MODULE_BUTTON_HEIGHT = 65;
+	private static final int MODULE_BUTTON_SPACING = 8;
+	private static final int PADDING = 12;
+	
+	private int scrollY = 0;
+	private final int maxScroll = 5;
 	
 	public ClickGui() {
 		super(Text.literal("GoatedClient"));
@@ -36,9 +39,12 @@ public class ClickGui extends Screen {
 	protected void init() {
 		super.init();
 		
-		// Calculate GUI dimensions
-		guiWidth = width / 2;
-		guiHeight = (height * 3) / 4;
+		GuiModule guiModule = (GuiModule) GoatedClient.getInstance().getModuleManager().getModuleByName("GUI");
+		if (guiModule == null) return;
+		
+		// Calculate GUI dimensions - 50% width, 75% height
+		guiWidth = (int) (width * 0.5);
+		guiHeight = (int) (height * 0.75);
 		guiX = (width - guiWidth) / 2;
 		guiY = (height - guiHeight) / 2;
 		
@@ -46,7 +52,7 @@ public class ClickGui extends Screen {
 		moduleButtons.clear();
 		List<Module> modules = GoatedClient.getInstance().getModuleManager().getModules();
 		
-		int buttonY = SEARCH_HEIGHT + PADDING;
+		int buttonY = guiY + SEARCH_HEIGHT + PADDING * 2;
 		int buttonsPerRow = 2;
 		int buttonWidth = (guiWidth - PADDING * 3) / buttonsPerRow;
 		
@@ -55,7 +61,7 @@ public class ClickGui extends Screen {
 			int col = i % buttonsPerRow;
 			int row = i / buttonsPerRow;
 			
-			int x = PADDING + col * (buttonWidth + PADDING);
+			int x = guiX + PADDING + col * (buttonWidth + PADDING);
 			int y = buttonY + row * (MODULE_BUTTON_HEIGHT + MODULE_BUTTON_SPACING);
 			
 			moduleButtons.add(new ModuleButton(module, x, y, buttonWidth, MODULE_BUTTON_HEIGHT));
@@ -64,19 +70,17 @@ public class ClickGui extends Screen {
 	
 	@Override
 	public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-		GuiModule guiModule = (GuiModule) GoatedClient.getInstance().getModuleManager().getModuleByName("GUI");
+		// Render semi-transparent background
+		context.fill(0, 0, width, height, 0x80000000);
 		
-		// Render background blur
-		if (guiModule.blur.getValue()) {
-			renderBackground(context, mouseX, mouseY, delta);
+		GuiModule guiModule = (GuiModule) GoatedClient.getInstance().getModuleManager().getModuleByName("GUI");
+		if (guiModule == null) {
+			super.render(context, mouseX, mouseY, delta);
+			return;
 		}
 		
-		// Adjust mouse coordinates to GUI space
-		int relativeMouseX = mouseX - guiX;
-		int relativeMouseY = mouseY - guiY;
-		
 		// Draw main GUI panel
-		drawMainPanel(context, relativeMouseX, relativeMouseY, guiModule);
+		drawMainPanel(context, mouseX, mouseY, guiModule);
 		
 		// Draw settings panel if open
 		if (settingsPanel != null) {
@@ -91,33 +95,57 @@ public class ClickGui extends Screen {
 		int borderColor = guiModule.borderColor.getValue();
 		int textColor = guiModule.textColor.getValue();
 		
-		// Draw background with rounded corners
+		// Draw main background
 		RenderUtil.drawRoundedRect(context, guiX, guiY, guiWidth, guiHeight, 8, bgColor);
 		
 		// Draw border
 		RenderUtil.drawRoundedRectOutline(context, guiX, guiY, guiWidth, guiHeight, 8, 2, borderColor);
 		
-		// Draw search bar
+		// Draw search bar background
 		int searchY = guiY + PADDING;
-		RenderUtil.drawRoundedRect(context, guiX + PADDING, searchY, guiWidth - PADDING * 2, SEARCH_HEIGHT, 5, 
-			searchFocused ? adjustAlpha(bgColor, 200) : adjustAlpha(bgColor, 150));
-		RenderUtil.drawRoundedRectOutline(context, guiX + PADDING, searchY, guiWidth - PADDING * 2, SEARCH_HEIGHT, 5, 1, borderColor);
+		int searchBarColor = searchFocused ? RenderUtil.adjustAlpha(borderColor, 100) : RenderUtil.adjustAlpha(borderColor, 50);
+		RenderUtil.drawRoundedRect(context, guiX + PADDING, searchY, guiWidth - PADDING * 2, SEARCH_HEIGHT, 6, searchBarColor);
 		
-		// Draw search icon and text
+		// Draw search text
 		String displayText = searchText.isEmpty() ? "Search modules..." : searchText;
-		context.drawText(textRenderer, displayText, guiX + PADDING + 5, searchY + 8, 
-			searchText.isEmpty() ? adjustAlpha(textColor, 128) : textColor, false);
+		context.drawText(textRenderer, displayText, guiX + PADDING + 10, searchY + 10, 
+			searchText.isEmpty() ? RenderUtil.adjustAlpha(textColor, 128) : textColor, false);
 		
-		// Draw separator line
-		int separatorY = guiY + PADDING + SEARCH_HEIGHT + 5;
+		// Draw separator line below search
+		int separatorY = guiY + PADDING + SEARCH_HEIGHT + PADDING;
 		RenderUtil.drawHorizontalLine(context, guiX + PADDING, separatorY, guiWidth - PADDING * 2, 1, borderColor);
 		
-		// Draw module buttons
+		// Draw module buttons with scrolling support
+		int moduleAreaY = separatorY + PADDING;
+		context.enableScissor(
+			guiX * minecraft.getWindow().getGuiScale(),
+			(int) ((height - (guiY + guiHeight)) * minecraft.getWindow().getGuiScale()),
+			(int) (guiWidth * minecraft.getWindow().getGuiScale()),
+			(int) ((guiHeight - moduleAreaY + guiY) * minecraft.getWindow().getGuiScale())
+		);
+		
+		int buttonIndex = 0;
 		for (ModuleButton button : moduleButtons) {
 			if (button.matchesSearch(searchText)) {
-				button.render(context, guiX, guiY + PADDING * 2 + SEARCH_HEIGHT + 5, mouseX, mouseY, guiModule);
+				int row = buttonIndex / 2;
+				int buttonYPos = moduleAreaY + row * (MODULE_BUTTON_HEIGHT + MODULE_BUTTON_SPACING);
+				button.setPosition(button.x, buttonYPos);
+				button.render(context, mouseX, mouseY, guiModule);
+				buttonIndex++;
 			}
 		}
+		
+		context.disableScissor();
+	}
+	
+	@Override
+	public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+		if (mouseX >= guiX && mouseX <= guiX + guiWidth &&
+			mouseY >= guiY && mouseY <= guiY + guiHeight) {
+			scrollY += (int) (verticalAmount * 10);
+			return true;
+		}
+		return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
 	}
 	
 	@Override
@@ -128,12 +156,10 @@ public class ClickGui extends Screen {
 			}
 		}
 		
-		int relativeMouseX = (int) mouseX - guiX;
-		int relativeMouseY = (int) mouseY - guiY - PADDING * 2 - SEARCH_HEIGHT - 5;
-		
 		// Check search bar click
-		if (relativeMouseX >= PADDING && relativeMouseX <= guiWidth - PADDING &&
-			relativeMouseY >= -SEARCH_HEIGHT - 5 && relativeMouseY <= -5) {
+		int searchY = guiY + PADDING;
+		if (mouseX >= guiX + PADDING && mouseX <= guiX + guiWidth - PADDING &&
+			mouseY >= searchY && mouseY <= searchY + SEARCH_HEIGHT) {
 			searchFocused = true;
 			return true;
 		} else {
@@ -143,12 +169,13 @@ public class ClickGui extends Screen {
 		// Check module button clicks
 		for (ModuleButton moduleButton : moduleButtons) {
 			if (moduleButton.matchesSearch(searchText) && 
-				moduleButton.isHovered(relativeMouseX, relativeMouseY)) {
+				moduleButton.isHovered((int) mouseX, (int) mouseY)) {
 				
-				if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
+				if (button == 0) { // Left click
 					moduleButton.module.toggle();
+					GoatedClient.getInstance().getConfigManager().save();
 					return true;
-				} else if (button == GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
+				} else if (button == 1) { // Right click
 					openSettingsPanel(moduleButton.module);
 					return true;
 				}
@@ -166,12 +193,18 @@ public class ClickGui extends Screen {
 			}
 		}
 		
+		if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
+			if (settingsPanel != null) {
+				settingsPanel = null;
+			} else {
+				close();
+			}
+			return true;
+		}
+		
 		if (searchFocused) {
 			if (keyCode == GLFW.GLFW_KEY_BACKSPACE && !searchText.isEmpty()) {
 				searchText = searchText.substring(0, searchText.length() - 1);
-				return true;
-			} else if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
-				searchFocused = false;
 				return true;
 			}
 		}
@@ -181,7 +214,7 @@ public class ClickGui extends Screen {
 	
 	@Override
 	public boolean charTyped(char chr, int modifiers) {
-		if (searchFocused) {
+		if (searchFocused && searchText.length() < 50) {
 			searchText += chr;
 			return true;
 		}
@@ -202,13 +235,10 @@ public class ClickGui extends Screen {
 		return false;
 	}
 	
-	private int adjustAlpha(int color, int alpha) {
-		return (color & 0x00FFFFFF) | (alpha << 24);
-	}
-	
 	private static class ModuleButton {
 		private final Module module;
-		private final int x, y, width, height;
+		private int x, y;
+		private final int width, height;
 		
 		public ModuleButton(Module module, int x, int y, int width, int height) {
 			this.module = module;
@@ -218,42 +248,44 @@ public class ClickGui extends Screen {
 			this.height = height;
 		}
 		
-		public void render(DrawContext context, int panelX, int panelY, int mouseX, int mouseY, GuiModule guiModule) {
-			int absoluteX = panelX + x;
-			int absoluteY = panelY + y;
-			
+		public void setPosition(int x, int y) {
+			this.x = x;
+			this.y = y;
+		}
+		
+		public void render(DrawContext context, int mouseX, int mouseY, GuiModule guiModule) {
 			boolean hovered = isHovered(mouseX, mouseY);
 			
+			// Darker color if enabled
 			int bgColor = module.isEnabled() ? 
-				adjustColor(guiModule.backgroundColor.getValue(), 30) : 
+				RenderUtil.adjustBrightness(guiModule.backgroundColor.getValue(), 20) : 
 				guiModule.backgroundColor.getValue();
 			
 			if (hovered) {
-				bgColor = adjustColor(bgColor, 15);
+				bgColor = RenderUtil.adjustBrightness(bgColor, 15);
 			}
 			
 			// Draw button background
-			RenderUtil.drawRoundedRect(context, absoluteX, absoluteY, width, height, 6, bgColor);
-			RenderUtil.drawRoundedRectOutline(context, absoluteX, absoluteY, width, height, 6, 1, 
-				guiModule.borderColor.getValue());
+			RenderUtil.drawRoundedRect(context, x, y, width, height, 6, bgColor);
+			RenderUtil.drawRoundedRectOutline(context, x, y, width, height, 6, 1, guiModule.borderColor.getValue());
 			
 			// Draw module name
-			context.drawText(MinecraftClient.getInstance().textRenderer, 
-				module.getName(), absoluteX + 8, absoluteY + 8, 
+			context.drawText(minecraft.getInstance().textRenderer, 
+				module.getName(), x + 10, y + 10, 
 				guiModule.textColor.getValue(), false);
 			
-			// Draw module description
+			// Draw module description (truncated)
 			String desc = module.getDescription();
-			if (desc.length() > 30) {
-				desc = desc.substring(0, 27) + "...";
+			if (desc.length() > 35) {
+				desc = desc.substring(0, 32) + "...";
 			}
-			context.drawText(MinecraftClient.getInstance().textRenderer, 
-				desc, absoluteX + 8, absoluteY + 22, 
-				adjustAlpha(guiModule.textColor.getValue(), 150), false);
+			context.drawText(minecraft.getInstance().textRenderer, 
+				desc, x + 10, y + 26, 
+				RenderUtil.adjustAlpha(guiModule.textColor.getValue(), 180), false);
 			
 			// Draw enabled indicator
 			if (module.isEnabled()) {
-				RenderUtil.drawRoundedRect(context, absoluteX + width - 18, absoluteY + 8, 10, 10, 2, 0xFF00FF00);
+				RenderUtil.drawRoundedRect(context, x + width - 22, y + 10, 12, 12, 3, 0xFF00FF00);
 			}
 		}
 		
@@ -262,19 +294,8 @@ public class ClickGui extends Screen {
 		}
 		
 		public boolean matchesSearch(String search) {
-			return search.isEmpty() || module.getName().toLowerCase().contains(search.toLowerCase());
-		}
-		
-		private int adjustColor(int color, int amount) {
-			int a = (color >> 24) & 0xFF;
-			int r = Math.min(255, ((color >> 16) & 0xFF) + amount);
-			int g = Math.min(255, ((color >> 8) & 0xFF) + amount);
-			int b = Math.min(255, (color & 0xFF) + amount);
-			return (a << 24) | (r << 16) | (g << 8) | b;
-		}
-		
-		private int adjustAlpha(int color, int alpha) {
-			return (color & 0x00FFFFFF) | (alpha << 24);
+			return search.isEmpty() || module.getName().toLowerCase().contains(search.toLowerCase()) ||
+				   module.getDescription().toLowerCase().contains(search.toLowerCase());
 		}
 	}
 }
