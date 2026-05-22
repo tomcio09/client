@@ -3,12 +3,14 @@ package pl.goated.client.util;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.render.*;
+import net.minecraft.client.util.math.MatrixStack;
 import org.joml.Matrix4f;
 
 public class RenderUtil {
 	
 	public static void drawRoundedRect(DrawContext context, int x, int y, int width, int height, int radius, int color) {
-		Matrix4f matrix = context.getMatrices().peek().getPositionMatrix();
+		MatrixStack matrices = context.getMatrices();
+		Matrix4f matrix = matrices.peek().getPositionMatrix();
 		
 		float a = (color >> 24 & 0xFF) / 255.0f;
 		float r = (color >> 16 & 0xFF) / 255.0f;
@@ -19,9 +21,10 @@ public class RenderUtil {
 		RenderSystem.defaultBlendFunc();
 		RenderSystem.setShader(GameRenderer::getPositionColorProgram);
 		
-		BufferBuilder bufferBuilder = Tessellator.getInstance().begin(VertexFormat.DrawMode.TRIANGLE_FAN, VertexFormats.POSITION_COLOR);
+		Tessellator tessellator = Tessellator.getInstance();
+		BufferBuilder bufferBuilder = tessellator.begin(VertexFormat.DrawMode.TRIANGLE_FAN, VertexFormats.POSITION_COLOR);
 		
-		// Main rectangle
+		// Center point
 		bufferBuilder.vertex(matrix, x + radius, y + radius, 0).color(r, g, b, a);
 		
 		// Top-left corner
@@ -72,8 +75,16 @@ public class RenderUtil {
 	}
 	
 	public static void drawRoundedRectOutline(DrawContext context, int x, int y, int width, int height, int radius, int thickness, int color) {
-		drawRoundedRect(context, x - thickness, y - thickness, width + thickness * 2, height + thickness * 2, radius, color);
-		drawRoundedRect(context, x, y, width, height, radius, 0xFF000000 | (color & 0x00FFFFFF));
+		// Draw outer rectangle
+		int outerColor = color;
+		drawRoundedRect(context, x - thickness, y - thickness, width + thickness * 2, height + thickness * 2, radius + thickness, outerColor);
+		
+		// Draw inner rectangle to create outline effect
+		int bgAlpha = (color >> 24) & 0xFF;
+		if (bgAlpha > 0) {
+			// Use transparent color for inner part
+			drawRoundedRect(context, x, y, width, height, radius, 0x00000000);
+		}
 	}
 	
 	public static void drawHorizontalLine(DrawContext context, int x, int y, int width, int thickness, int color) {
@@ -81,7 +92,8 @@ public class RenderUtil {
 	}
 	
 	public static void drawCircleOutline(DrawContext context, int centerX, int centerY, int radius, int thickness, int color) {
-		Matrix4f matrix = context.getMatrices().peek().getPositionMatrix();
+		MatrixStack matrices = context.getMatrices();
+		Matrix4f matrix = matrices.peek().getPositionMatrix();
 		
 		float a = (color >> 24 & 0xFF) / 255.0f;
 		float r = (color >> 16 & 0xFF) / 255.0f;
@@ -91,8 +103,10 @@ public class RenderUtil {
 		RenderSystem.enableBlend();
 		RenderSystem.defaultBlendFunc();
 		RenderSystem.setShader(GameRenderer::getPositionColorProgram);
+		RenderSystem.lineWidth(thickness);
 		
-		BufferBuilder bufferBuilder = Tessellator.getInstance().begin(VertexFormat.DrawMode.DEBUG_LINE_STRIP, VertexFormats.POSITION_COLOR);
+		Tessellator tessellator = Tessellator.getInstance();
+		BufferBuilder bufferBuilder = tessellator.begin(VertexFormat.DrawMode.DEBUG_LINE_STRIP, VertexFormats.POSITION_COLOR);
 		
 		for (int i = 0; i <= 360; i += 5) {
 			double angle = Math.toRadians(i);
@@ -103,6 +117,11 @@ public class RenderUtil {
 		}
 		
 		BufferRenderer.drawWithGlobalProgram(bufferBuilder.end());
+		RenderSystem.lineWidth(1.0f);
 		RenderSystem.disableBlend();
+	}
+	
+	public static void drawRect(DrawContext context, int x, int y, int width, int height, int color) {
+		context.fill(x, y, x + width, y + height, color);
 	}
 }
