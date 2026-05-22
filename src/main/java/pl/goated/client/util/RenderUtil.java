@@ -48,6 +48,49 @@ public class RenderUtil {
 		context.fill(x, y, x + width, y + height, color);
 	}
 	
+	public static void drawCircleOutline(DrawContext context, int centerX, int centerY, int radius, int thickness, int color) {
+		// Draw circle outline using simple points
+		for (int i = 0; i < 360; i += 5) {
+			double angle = Math.toRadians(i);
+			int x1 = (int) (centerX + Math.cos(angle) * radius);
+			int y1 = (int) (centerY + Math.sin(angle) * radius);
+			
+			double nextAngle = Math.toRadians(i + 5);
+			int x2 = (int) (centerX + Math.cos(nextAngle) * radius);
+			int y2 = (int) (centerY + Math.sin(nextAngle) * radius);
+			
+			// Draw line between points
+			drawLine(context, x1, y1, x2, y2, color);
+		}
+	}
+	
+	public static void drawLine(DrawContext context, int x1, int y1, int x2, int y2, int color) {
+		int dx = Math.abs(x2 - x1);
+		int dy = Math.abs(y2 - y1);
+		int sx = x1 < x2 ? 1 : -1;
+		int sy = y1 < y2 ? 1 : -1;
+		int err = dx - dy;
+		
+		int x = x1;
+		int y = y1;
+		
+		while (true) {
+			context.fill(x, y, x + 1, y + 1, color);
+			
+			if (x == x2 && y == y2) break;
+			
+			int e2 = 2 * err;
+			if (e2 > -dy) {
+				err -= dy;
+				x += sx;
+			}
+			if (e2 < dx) {
+				err += dx;
+				y += sy;
+			}
+		}
+	}
+	
 	public static int adjustAlpha(int color, int alpha) {
 		return (color & 0x00FFFFFF) | (alpha << 24);
 	}
