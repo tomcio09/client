@@ -21,7 +21,6 @@ public class GoatedClient implements ClientModInitializer {
 	private ModuleManager moduleManager;
 	private ConfigManager configManager;
 	private ClickGui clickGui;
-	
 	private KeyBinding openGuiKey;
 	
 	@Override
@@ -29,30 +28,34 @@ public class GoatedClient implements ClientModInitializer {
 		INSTANCE = this;
 		LOGGER.info("Initializing " + MOD_NAME);
 		
-		// Initialize managers
-		configManager = new ConfigManager();
-		moduleManager = new ModuleManager();
-		clickGui = new ClickGui();
-		
-		// Load config
-		configManager.load();
-		
-		// Register keybinding
-		openGuiKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-			"key.goatedclient.open_gui",
-			InputUtil.Type.KEYSYM,
-			GLFW.GLFW_KEY_RIGHT_SHIFT,
-			"category.goatedclient"
-		));
-		
-		// Register tick event
-		ClientTickEvents.END_CLIENT_TICK.register(client -> {
-			if (openGuiKey.wasPressed()) {
-				client.setScreen(clickGui);
-			}
-		});
-		
-		LOGGER.info(MOD_NAME + " initialized successfully!");
+		try {
+			// Initialize managers
+			configManager = new ConfigManager();
+			moduleManager = new ModuleManager();
+			clickGui = new ClickGui();
+			
+			// Load config
+			configManager.load();
+			
+			// Register keybinding
+			openGuiKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+				"key.goatedclient.open_gui",
+				InputUtil.Type.KEYSYM,
+				GLFW.GLFW_KEY_RIGHT_SHIFT,
+				"category.goatedclient"
+			));
+			
+			// Register tick event
+			ClientTickEvents.END_CLIENT_TICK.register(client -> {
+				if (openGuiKey.wasPressed()) {
+					client.setScreen(clickGui);
+				}
+			});
+			
+			LOGGER.info(MOD_NAME + " initialized successfully!");
+		} catch (Exception e) {
+			LOGGER.error("Failed to initialize GoatedClient", e);
+		}
 	}
 	
 	public static GoatedClient getInstance() {
