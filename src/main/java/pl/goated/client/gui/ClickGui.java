@@ -27,7 +27,7 @@ public class ClickGui extends Screen {
 	private static final int MODULE_BUTTON_HEIGHT = 65;
 	private static final int MODULE_BUTTON_SPACING = 8;
 	private static final int PADDING = 12;
-	private static final int CORNER_RADIUS = 20; // Zmienione z 8 na 20
+	private static final int CORNER_RADIUS = 20;
 	
 	public ClickGui() {
 		super(Text.literal("GoatedClient"));
@@ -38,10 +38,7 @@ public class ClickGui extends Screen {
 		super.init();
 		
 		GuiModule guiModule = (GuiModule) GoatedClient.getInstance().getModuleManager().getModuleByName("GUI");
-		if (guiModule == null) {
-			GoatedClient.LOGGER.warn("GUI Module not found!");
-			return;
-		}
+		if (guiModule == null) return;
 		
 		// Calculate GUI dimensions - 50% width, 75% height
 		guiWidth = (int) (width * 0.5);
@@ -53,10 +50,7 @@ public class ClickGui extends Screen {
 		moduleButtons.clear();
 		List<Module> modules = GoatedClient.getInstance().getModuleManager().getModules();
 		
-		if (modules.isEmpty()) {
-			GoatedClient.LOGGER.warn("No modules found!");
-			return;
-		}
+		if (modules.isEmpty()) return;
 		
 		int buttonY = guiY + SEARCH_HEIGHT + PADDING * 2;
 		int buttonsPerRow = 2;
@@ -76,8 +70,8 @@ public class ClickGui extends Screen {
 	
 	@Override
 	public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-		// Render semi-transparent background
-		this.renderBackground(context, mouseX, mouseY, delta);
+		// Bardzo delikatne przyciemnienie tła (bez blura!)
+		context.fill(0, 0, width, height, 0x30000000); // 0x30 to ok. 18% przezroczystości czarnego
 		
 		GuiModule guiModule = (GuiModule) GoatedClient.getInstance().getModuleManager().getModuleByName("GUI");
 		if (guiModule == null) {
@@ -101,10 +95,7 @@ public class ClickGui extends Screen {
 		int borderColor = guiModule.borderColor.getValue();
 		int textColor = guiModule.textColor.getValue();
 		
-		GoatedClient.LOGGER.info("Drawing GUI: x=" + guiX + ", y=" + guiY + ", w=" + guiWidth + ", h=" + guiHeight);
-		GoatedClient.LOGGER.info("BG Color: " + Integer.toHexString(bgColor));
-		
-		// Draw main background z zaokrągleniem 20
+		// Draw main background
 		RenderUtil.drawRoundedRect(context, guiX, guiY, guiWidth, guiHeight, CORNER_RADIUS, bgColor);
 		
 		// Draw border
@@ -176,7 +167,6 @@ public class ClickGui extends Screen {
 				if (button == 0) { // Left click
 					moduleButton.module.toggle();
 					GoatedClient.getInstance().getConfigManager().save();
-					GoatedClient.LOGGER.info("Toggled module: " + moduleButton.module.getName());
 					return true;
 				} else if (button == 1) { // Right click
 					openSettingsPanel(moduleButton.module);
@@ -186,6 +176,16 @@ public class ClickGui extends Screen {
 		}
 		
 		return super.mouseClicked(mouseX, mouseY, button);
+	}
+	
+	// DODANE: Rozwiązuje problem blokującego się kursora przy suwakach!
+	@Override
+	public boolean mouseReleased(double mouseX, double mouseY, int button) {
+		if (settingsPanel != null) {
+			settingsPanel.mouseReleased(mouseX, mouseY, button);
+			return true;
+		}
+		return super.mouseReleased(mouseX, mouseY, button);
 	}
 	
 	@Override
@@ -259,7 +259,6 @@ public class ClickGui extends Screen {
 		public void render(DrawContext context, int mouseX, int mouseY, GuiModule guiModule) {
 			boolean hovered = isHovered(mouseX, mouseY);
 			
-			// Darker color if enabled
 			int bgColor = module.isEnabled() ? 
 				RenderUtil.adjustBrightness(guiModule.backgroundColor.getValue(), 20) : 
 				guiModule.backgroundColor.getValue();
@@ -268,18 +267,15 @@ public class ClickGui extends Screen {
 				bgColor = RenderUtil.adjustBrightness(bgColor, 15);
 			}
 			
-			// Draw button background z zaokrągleniem 12
 			RenderUtil.drawRoundedRect(context, x, y, width, height, 12, bgColor);
 			RenderUtil.drawRoundedRectOutline(context, x, y, width, height, 12, 1, guiModule.borderColor.getValue());
 			
 			MinecraftClient mc = MinecraftClient.getInstance();
 			
-			// Draw module name
 			context.drawText(mc.textRenderer, 
 				module.getName(), x + 10, y + 10, 
 				guiModule.textColor.getValue(), false);
 			
-			// Draw module description (truncated)
 			String desc = module.getDescription();
 			if (desc.length() > 35) {
 				desc = desc.substring(0, 32) + "...";
@@ -288,7 +284,6 @@ public class ClickGui extends Screen {
 				desc, x + 10, y + 26, 
 				RenderUtil.adjustAlpha(guiModule.textColor.getValue(), 180), false);
 			
-			// Draw enabled indicator
 			if (module.isEnabled()) {
 				RenderUtil.drawRoundedRect(context, x + width - 22, y + 10, 12, 12, 3, 0xFF00FF00);
 			}
