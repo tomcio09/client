@@ -8,6 +8,7 @@ import pl.goated.client.GoatedClient;
 import pl.goated.client.module.Module;
 import pl.goated.client.module.settings.BooleanSetting;
 import pl.goated.client.module.settings.ColorSetting;
+import pl.goated.client.module.settings.FloatSetting;
 import pl.goated.client.module.settings.Setting;
 
 import java.io.IOException;
@@ -27,9 +28,7 @@ public class ConfigManager {
 	public void save() {
 		try {
 			if (GoatedClient.getInstance() == null || 
-			    GoatedClient.getInstance().getModuleManager() == null) {
-				return; // Don't save if not fully initialized
-			}
+			    GoatedClient.getInstance().getModuleManager() == null) return;
 			
 			JsonObject root = new JsonObject();
 			JsonObject modules = new JsonObject();
@@ -49,6 +48,8 @@ public class ConfigManager {
 									settings.addProperty(setting.getName(), (Integer) setting.getValue());
 								} else if (setting instanceof BooleanSetting) {
 									settings.addProperty(setting.getName(), (Boolean) setting.getValue());
+								} else if (setting instanceof FloatSetting) {
+									settings.addProperty(setting.getName(), (Float) setting.getValue());
 								}
 							}
 						} catch (IllegalAccessException e) {
@@ -64,10 +65,8 @@ public class ConfigManager {
 			root.add("modules", modules);
 			Files.writeString(configPath, gson.toJson(root));
 			
-		} catch (IOException e) {
-			GoatedClient.LOGGER.error("Failed to save config", e);
 		} catch (Exception e) {
-			GoatedClient.LOGGER.error("Unexpected error during config save", e);
+			GoatedClient.LOGGER.error("Failed to save config", e);
 		}
 	}
 	
@@ -81,45 +80,43 @@ public class ConfigManager {
 			String json = Files.readString(configPath);
 			JsonObject root = gson.fromJson(json, JsonObject.class);
 			JsonObject modules = root.getAsJsonObject("modules");
-			
 			if (modules == null) return;
 			
 			for (Module module : GoatedClient.getInstance().getModuleManager().getModules()) {
-				if (modules.has(module.getName())) {
-					JsonObject moduleData = modules.getAsJsonObject(module.getName());
+				if (!modules.has(module.getName())) continue;
+				
+				JsonObject moduleData = modules.getAsJsonObject(module.getName());
+				if (moduleData.has("enabled")) {
+					module.setEnabled(moduleData.get("enabled").getAsBoolean());
+				}
+				
+				if (moduleData.has("settings")) {
+					JsonObject settings = moduleData.getAsJsonObject("settings");
 					
-					if (moduleData.has("enabled")) {
-						module.setEnabled(moduleData.get("enabled").getAsBoolean());
-					}
-					
-					if (moduleData.has("settings")) {
-						JsonObject settings = moduleData.getAsJsonObject("settings");
-						
-						for (Field field : module.getClass().getDeclaredFields()) {
-							if (Setting.class.isAssignableFrom(field.getType())) {
-								field.setAccessible(true);
-								try {
-									Setting<?> setting = (Setting<?>) field.get(module);
-									if (setting != null && settings.has(setting.getName())) {
-										if (setting instanceof ColorSetting colorSetting) {
-											colorSetting.setValue(settings.get(setting.getName()).getAsInt());
-										} else if (setting instanceof BooleanSetting booleanSetting) {
-											booleanSetting.setValue(settings.get(setting.getName()).getAsBoolean());
-										}
+					for (Field field : module.getClass().getDeclaredFields()) {
+						if (Setting.class.isAssignableFrom(field.getType())) {
+							field.setAccessible(true);
+							try {
+								Setting<?> setting = (Setting<?>) field.get(module);
+								if (setting != null && settings.has(setting.getName())) {
+									if (setting instanceof ColorSetting cs) {
+										cs.setValue(settings.get(setting.getName()).getAsInt());
+									} else if (setting instanceof BooleanSetting bs) {
+										bs.setValue(settings.get(setting.getName()).getAsBoolean());
+									} else if (setting instanceof FloatSetting fs) {
+										fs.setValue(settings.get(setting.getName()).getAsFloat());
 									}
-								} catch (IllegalAccessException e) {
-									GoatedClient.LOGGER.error("Failed to load setting", e);
 								}
+							} catch (IllegalAccessException e) {
+								GoatedClient.LOGGER.error("Failed to load setting", e);
 							}
 						}
 					}
 				}
 			}
 			
-		} catch (IOException e) {
-			GoatedClient.LOGGER.error("Failed to load config", e);
 		} catch (Exception e) {
-			GoatedClient.LOGGER.error("Unexpected error during config load", e);
+			GoatedClient.LOGGER.error("Failed to load config", e);
 		}
 	}
 }
