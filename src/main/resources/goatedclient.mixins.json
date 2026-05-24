@@ -3,7 +3,8 @@
 	"package": "pl.goated.client.mixin",
 	"compatibilityLevel": "JAVA_21",
 	"client": [
-		"MinecraftClientMixin"
+		"MinecraftClientMixin",
+		"LivingEntityMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
