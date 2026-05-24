@@ -1,7 +1,7 @@
 package pl.goated.client.mixin;
 
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.player.PlayerEntity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
@@ -11,7 +11,12 @@ import pl.goated.client.module.impl.NoPushModule;
 @Mixin(LivingEntity.class)
 public class LivingEntityMixin {
 	
-	@ModifyVariable(method = "pushOutOfBlocks", at = @At("HEAD"), argsOnly = true)
+	@ModifyVariable(
+		method = "pushOutOfBlocks(DDD)V",
+		at = @At("HEAD"),
+		argsOnly = true,
+		ordinal = 0
+	)
 	private double modifyPushX(double x) {
 		if (!isLocalPlayer()) return x;
 		NoPushModule module = getNoPushModule();
@@ -19,7 +24,12 @@ public class LivingEntityMixin {
 		return x * module.getPushMultiplier();
 	}
 	
-	@ModifyVariable(method = "pushOutOfBlocks", at = @At("HEAD"), argsOnly = true, ordinal = 1)
+	@ModifyVariable(
+		method = "pushOutOfBlocks(DDD)V",
+		at = @At("HEAD"),
+		argsOnly = true,
+		ordinal = 1
+	)
 	private double modifyPushZ(double z) {
 		if (!isLocalPlayer()) return z;
 		NoPushModule module = getNoPushModule();
@@ -29,7 +39,7 @@ public class LivingEntityMixin {
 	
 	private boolean isLocalPlayer() {
 		LivingEntity self = (LivingEntity) (Object) this;
-		MinecraftClient mc = net.minecraft.client.MinecraftClient.getInstance();
+		MinecraftClient mc = MinecraftClient.getInstance();
 		return mc != null && mc.player != null && self.equals(mc.player);
 	}
 	
