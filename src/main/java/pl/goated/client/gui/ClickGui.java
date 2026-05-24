@@ -68,16 +68,13 @@ public class ClickGui extends Screen {
 	
 	@Override
 	public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-		// WAŻNE: Usunięto wywołanie renderBackground i super.render, które aplikowały blur ekranu z 1.21!
-		
-		// Lekkie przyciemnienie tła (ostro i bez efektów ubocznych)
 		context.fill(0, 0, width, height, 0x50000000);
 		
 		GuiModule guiModule = (GuiModule) GoatedClient.getInstance().getModuleManager().getModuleByName("GUI");
 		if (guiModule == null) return;
 		
 		context.getMatrices().push();
-		context.getMatrices().translate(0, 0, 100); // Wymuś by GUI było na wierzchu bez rozmywania
+		context.getMatrices().translate(0, 0, 100);
 		
 		drawMainPanel(context, mouseX, mouseY, guiModule);
 		
@@ -237,34 +234,34 @@ public class ClickGui extends Screen {
 		public void render(DrawContext context, int mouseX, int mouseY, GuiModule guiModule) {
 			boolean hovered = isHovered(mouseX, mouseY);
 			
-			int bgColor = module.isEnabled() ? 
-				RenderUtil.adjustBrightness(guiModule.backgroundColor.getValue(), 20) : 
+			int bgColor = module.isEnabled() ?
+				RenderUtil.adjustBrightness(guiModule.backgroundColor.getValue(), 20) :
 				guiModule.backgroundColor.getValue();
 			
 			if (hovered) {
 				bgColor = RenderUtil.adjustBrightness(bgColor, 15);
 			}
 			
+			// Border zmienia kolor na zielony gdy moduł jest włączony
+			int borderColor = module.isEnabled() ? 0xFF00CC00 : guiModule.borderColor.getValue();
+			int borderThickness = module.isEnabled() ? 2 : 1;
+			
 			RenderUtil.drawRoundedRect(context, x, y, width, height, 12, bgColor);
-			RenderUtil.drawRoundedRectOutline(context, x, y, width, height, 12, 1, guiModule.borderColor.getValue());
+			RenderUtil.drawRoundedRectOutline(context, x, y, width, height, 12, borderThickness, borderColor);
 			
 			MinecraftClient mc = MinecraftClient.getInstance();
 			
-			context.drawText(mc.textRenderer, 
-				module.getName(), x + 10, y + 10, 
+			context.drawText(mc.textRenderer,
+				module.getName(), x + 10, y + 10,
 				guiModule.textColor.getValue(), false);
 			
 			String desc = module.getDescription();
 			if (desc.length() > 35) {
 				desc = desc.substring(0, 32) + "...";
 			}
-			context.drawText(mc.textRenderer, 
-				desc, x + 10, y + 26, 
+			context.drawText(mc.textRenderer,
+				desc, x + 10, y + 26,
 				RenderUtil.adjustAlpha(guiModule.textColor.getValue(), 180), false);
-			
-			if (module.isEnabled()) {
-				RenderUtil.drawRoundedRect(context, x + width - 22, y + 10, 12, 12, 3, 0xFF00FF00);
-			}
 		}
 		
 		public boolean isHovered(int mouseX, int mouseY) {
