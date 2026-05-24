@@ -15,11 +15,11 @@ public class HudModule extends Module {
 	public final BooleanSetting showCoordinates;
 	
 	public HudModule() {
-		super("HUD", "Heads Up Display customization", Category.RENDER);
+		super("HUD", "Shows enabled modules on screen", Category.RENDER);
 		
 		showWatermark = new BooleanSetting("Show Watermark", true);
 		showArrayList = new BooleanSetting("Show ArrayList", true);
-		showCoordinates = new BooleanSetting("Show Coordinates", true);
+		showCoordinates = new BooleanSetting("Show Coordinates", false);
 		
 		settings.add(showWatermark);
 		settings.add(showArrayList);
