@@ -11,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pl.goated.client.config.ConfigManager;
 import pl.goated.client.gui.ClickGui;
+import pl.goated.client.hud.HudRenderer;
 import pl.goated.client.module.ModuleManager;
 
 public class GoatedClient implements ClientModInitializer {
@@ -30,15 +31,15 @@ public class GoatedClient implements ClientModInitializer {
 		LOGGER.info("Initializing " + MOD_NAME);
 		
 		try {
-			// Initialize managers
 			configManager = new ConfigManager();
 			moduleManager = new ModuleManager();
 			clickGui = new ClickGui();
 			
-			// Load config
 			configManager.load();
 			
-			// Register keybinding (RIGHT_SHIFT)
+			// Rejestracja HUD
+			HudRenderer.register();
+			
 			openGuiKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
 				"key.goatedclient.open_gui",
 				InputUtil.Type.KEYSYM,
@@ -46,7 +47,6 @@ public class GoatedClient implements ClientModInitializer {
 				"category.goatedclient"
 			));
 			
-			// Register tick event - works everywhere (menus, worlds, etc)
 			ClientTickEvents.END_CLIENT_TICK.register(client -> {
 				if (openGuiKey.wasPressed()) {
 					MinecraftClient.getInstance().setScreen(clickGui);
@@ -56,23 +56,11 @@ public class GoatedClient implements ClientModInitializer {
 			LOGGER.info(MOD_NAME + " initialized successfully!");
 		} catch (Exception e) {
 			LOGGER.error("Failed to initialize GoatedClient", e);
-			e.printStackTrace();
 		}
 	}
 	
-	public static GoatedClient getInstance() {
-		return INSTANCE;
-	}
-	
-	public ModuleManager getModuleManager() {
-		return moduleManager;
-	}
-	
-	public ConfigManager getConfigManager() {
-		return configManager;
-	}
-	
-	public ClickGui getClickGui() {
-		return clickGui;
-	}
+	public static GoatedClient getInstance() { return INSTANCE; }
+	public ModuleManager getModuleManager() { return moduleManager; }
+	public ConfigManager getConfigManager() { return configManager; }
+	public ClickGui getClickGui() { return clickGui; }
 }
